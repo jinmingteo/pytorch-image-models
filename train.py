@@ -76,6 +76,8 @@ parser.add_argument('--model', default='resnet101', type=str, metavar='MODEL',
                     help='Name of model to train (default: "countception"')
 parser.add_argument('--pretrained', action='store_true', default=False,
                     help='Start with pretrained version of specified network (if avail)')
+parser.add_argument('--load_state', default='weights/resnet50.pth',type=str,
+                    help='Load pretrained version of specified network, assuming it is pre-downloaded on weights/')
 parser.add_argument('--initial-checkpoint', default='', type=str, metavar='PATH',
                     help='Initialize model from this checkpoint (default: none)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
@@ -340,6 +342,15 @@ def main():
         bn_eps=args.bn_eps,
         scriptable=args.torchscript,
         checkpoint_path=args.initial_checkpoint)
+
+    if args.load_state:
+        state = torch.load(args.load_state)
+        # drop final classifier weights so that it can load properly
+        for key in list(state.keys()):
+            if 'fc' or 'classifier' in key:
+                state.pop(key, None)
+        model.load_state_dict(state, strict=False)
+
     if args.num_classes is None:
         assert hasattr(model, 'num_classes'), 'Model must have `num_classes` attr if not set on cmd line/config.'
         args.num_classes = model.num_classes  # FIXME handle model default vs config num_classes more elegantly
