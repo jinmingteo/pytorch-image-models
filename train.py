@@ -70,8 +70,8 @@ parser.add_argument('--dataset', '-d', metavar='NAME', default='',
                     help='dataset type (default: ImageFolder/ImageTar if empty)')
 parser.add_argument('--train-split', metavar='NAME', default='train',
                     help='dataset train split (default: train)')
-parser.add_argument('--val-split', metavar='NAME', default='validation',
-                    help='dataset validation split (default: validation)')
+parser.add_argument('--val-split', metavar='NAME', default='val',
+                    help='dataset validation split (default: val)')
 parser.add_argument('--model', default='resnet101', type=str, metavar='MODEL',
                     help='Name of model to train (default: "countception"')
 parser.add_argument('--pretrained', action='store_true', default=False,
@@ -175,6 +175,8 @@ parser.add_argument('--aug-splits', type=int, default=0,
                     help='Number of augmentation splits (default: 0, valid: 0 or >=2)')
 parser.add_argument('--jsd', action='store_true', default=False,
                     help='Enable Jensen-Shannon Divergence + CE loss. Use with `--aug-splits`.')
+parser.add_argument('--weighted_loss', action='store_true', default=False,
+                    help='Enable weighted class losses to handle class imbalance')
 parser.add_argument('--reprob', type=float, default=0., metavar='PCT',
                     help='Random erase prob (default: 0.)')
 parser.add_argument('--remode', type=str, default='const',
@@ -538,11 +540,32 @@ def main():
     elif mixup_active:
         # smoothing is handled with mixup target transform
         train_loss_fn = SoftTargetCrossEntropy().cuda()
+    elif args.weighted_loss:
+        ## REFINE THIS NEXT TIME PLS
+        train_path = os.path.join(args.data_dir, args.train_split)
+        val_path = os.path.join(args.data_dir, args.val_split)
+        assert os.path.exists(train_path)
+        assert os.path.exists(val_path)
+        classes = os.listdir(train_path)
+        classes = [item for item in classes if not item.startswith('.')]
+        weights_list = []
+        for class_name in sorted(classes):
+            counter = len(os.listdir(os.path.join(train_path, class_name)))
+            counter += len(os.listdir(os.path.join(val_path, class_name)))
+            weights_list.append(counter)
+        while len(weights_list) < args.num_classes:
+            weights_list.append(0)
+
+        # OVER HEAVY LOSS FOR FIRST CLASS
+        weights_list[0] *= 5
+        weights_tensor = torch.tensor(weights_list) / sum(weights_list)
+        train_loss_fn = nn.CrossEntropyLoss(weight=weights_tensor.cuda()).cuda()
+        validate_loss_fn = nn.CrossEntropyLoss(weight=weights_tensor.cuda()).cuda()
     elif args.smoothing:
         train_loss_fn = LabelSmoothingCrossEntropy(smoothing=args.smoothing).cuda()
     else:
         train_loss_fn = nn.CrossEntropyLoss().cuda()
-    validate_loss_fn = nn.CrossEntropyLoss().cuda()
+    validate_loss_fn = nn.CrossEntropyLoss().cuda() if not args.weighted_loss else validate_loss_fn
 
     # setup checkpoint saver and eval metric tracking
     eval_metric = args.eval_metric
