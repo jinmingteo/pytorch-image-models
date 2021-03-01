@@ -11,6 +11,9 @@ RUN python -m pip install -r /workspace/requirements.txt
 COPY ./ /workspace/
 RUN python -m pip install /workspace/
 
+RUN python -m pip install /workspace/inplace_abn
+RUN python -m pip install -r /workspace/inplace_abn/scripts/requirements.txt
+
 ENV TZ=Asia/Singapore
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 

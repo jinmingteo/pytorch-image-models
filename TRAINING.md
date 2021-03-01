@@ -9,6 +9,17 @@ python train.py imagenette2-160/ --model resnet50 --amp --aa 'v0' --num-classes 
 python train.py imagenette2-160/ --model swsl_resnext50_32x4d --amp --aa 'v0' --num-classes 5  --load_state weights/swsl_resnext50_32x4d.pth
 ```
 
+## Weighted Training with pretrained (NO INTERNET)
+```
+python train.py imagenette2-160/ --model swsl_resnext50_32x4d --amp --aa 'v0' --num-classes 5  --load_state weights/swsl_resnext50_32x4d.pth --weighted_loss --val-split val
+```
+
+## Weighted Training with TResnet (Stanford dataset) (NO INTERNET)
+```
+python train.py imagenette2-160/ --model tresnet_l --amp --aa 'v0' --num-classes 5  --load_state weights/tresnet-l_stanford_cars.pth --weighted_loss --val-split val
+```
+
+
 ## Training from scratch
 ```
 python train.py imagenette2-160/ --model resnet50 --amp --aa 'v0' --num-classes 5 --resume output/train/20210226-021234-resnet50-224/model_best.pth.tar

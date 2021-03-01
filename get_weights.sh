@@ -20,3 +20,6 @@ wget -O weights/ssl_resnet18.pth https://dl.fbaipublicfiles.com/semiweaksupervis
 
 # ssl_resnet50
 wget -O weights/ssl_resnet50.pth https://dl.fbaipublicfiles.com/semiweaksupervision/model_files/semi_supervised_resnet50-08389792.pth
+
+# Alibaba tresnet_m img_size 368
+wget -O weights/tresnet-l_stanford_cars.pth https://miil-public-eu.oss-eu-central-1.aliyuncs.com/model-zoo/tresnet/stanford_cars_tresnet-l-v2_96_27.pth
