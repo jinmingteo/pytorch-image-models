@@ -34,3 +34,18 @@ class SoftTargetCrossEntropy(nn.Module):
     def forward(self, x, target):
         loss = torch.sum(-target * F.log_softmax(x, dim=-1), dim=-1)
         return loss.mean()
+
+
+class WeightedSoftTargetCrossEntropy(nn.Module):
+    '''
+    input: weights in tensor and cuda()
+    '''
+    def __init__(self, weight=None):
+        super(WeightedSoftTargetCrossEntropy, self).__init__()
+        self.weight = weight
+        if self.weight is None:
+            print ("Warning: Using WeightedSoftTargetCrossEntropy without weights!")
+
+    def forward(self, x, target):
+        loss = torch.sum(self.weight * -target * F.log_softmax(x, dim=-1), dim=-1)
+        return loss.mean()

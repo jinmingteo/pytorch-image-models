@@ -19,6 +19,10 @@ python train.py imagenette2-160/ --model swsl_resnext50_32x4d --amp --aa 'v0' --
 python train.py imagenette2-160/ --model tresnet_l --amp --aa 'v0' --num-classes 5  --load_state weights/tresnet-l_stanford_cars.pth --weighted_loss --val-split val
 ```
 
+## Weighted Training with MIXUP
+```
+python train.py imagenette2-160/ --model tresnet_l --amp --aa 'v0' --num-classes 5  --load_state weights/tresnet-l_stanford_cars.pth --weighted_loss --val-split val --mixup 0.2 --cutmix-minmax 0.3 0.8 --mixup-switch-prob 0.3 --mixup-prob 0.7
+```
 
 ## Training from scratch
 ```

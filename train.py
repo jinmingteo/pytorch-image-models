@@ -31,7 +31,7 @@ from torch.nn.parallel import DistributedDataParallel as NativeDDP
 from timm.data import create_dataset, create_loader, resolve_data_config, Mixup, FastCollateMixup, AugMixDataset
 from timm.models import create_model, resume_checkpoint, load_checkpoint, convert_splitbn_model, model_parameters
 from timm.utils import *
-from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy, JsdCrossEntropy
+from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy, WeightedSoftTargetCrossEntropy, JsdCrossEntropy
 from timm.optim import create_optimizer
 from timm.scheduler import create_scheduler
 from timm.utils import ApexScaler, NativeScaler
@@ -537,9 +537,6 @@ def main():
     if args.jsd:
         assert num_aug_splits > 1  # JSD only valid with aug splits set
         train_loss_fn = JsdCrossEntropy(num_splits=num_aug_splits, smoothing=args.smoothing).cuda()
-    elif mixup_active:
-        # smoothing is handled with mixup target transform
-        train_loss_fn = SoftTargetCrossEntropy().cuda()
     elif args.weighted_loss:
         ## REFINE THIS NEXT TIME PLS
         train_path = os.path.join(args.data_dir, args.train_split)
@@ -559,8 +556,17 @@ def main():
         # OVER HEAVY LOSS FOR FIRST CLASS
         weights_list[0] *= 5
         weights_tensor = torch.tensor(weights_list) / sum(weights_list)
-        train_loss_fn = nn.CrossEntropyLoss(weight=weights_tensor.cuda()).cuda()
-        validate_loss_fn = nn.CrossEntropyLoss(weight=weights_tensor.cuda()).cuda()
+        weights_tensor = weights_tensor.cuda()
+        if use_amp:
+            weights_tensor = weights_tensor.to(dtype=torch.float16)
+        if mixup_active:
+            train_loss_fn = WeightedSoftTargetCrossEntropy(weight=weights_tensor)
+        else:
+            train_loss_fn = nn.CrossEntropyLoss(weight=weights_tensor).cuda()
+        validate_loss_fn = nn.CrossEntropyLoss(weight=weights_tensor).cuda()
+    elif mixup_active:
+        # smoothing is handled with mixup target transform
+        train_loss_fn = SoftTargetCrossEntropy().cuda()
     elif args.smoothing:
         train_loss_fn = LabelSmoothingCrossEntropy(smoothing=args.smoothing).cuda()
     else:
@@ -655,10 +661,11 @@ def train_one_epoch(
     for batch_idx, (input, target) in enumerate(loader):
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
-        if not args.prefetcher:
+        if not args.prefetcher:      
             input, target = input.cuda(), target.cuda()
             if mixup_fn is not None:
                 input, target = mixup_fn(input, target)
+                
         if args.channels_last:
             input = input.contiguous(memory_format=torch.channels_last)
 
