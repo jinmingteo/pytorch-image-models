@@ -11,6 +11,7 @@ RUN python -m pip install -r /workspace/requirements.txt
 COPY ./ /workspace/
 RUN python -m pip install /workspace/
 
+# do not use this (inplace abn is not related)
 RUN python -m pip install /workspace/inplace_abn
 RUN python -m pip install -r /workspace/inplace_abn/scripts/requirements.txt
 
